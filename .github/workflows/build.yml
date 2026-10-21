@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 env:
   # The publication tool replaces this one sentinel with the reviewed private SHA.
-  AOH_CI_SOURCE: '88af66eac0133735bfde62cfa13e82c042df313d'
+  AOH_CI_SOURCE: '26eaa4bdb5a177dd5df2eb8b4ad6dfd84c0e1d03'
 jobs:
   pair:
     if: github.repository == 'zhui9808-netizen/aoh3-public-build' && github.ref == 'refs/heads/main'
@@ -48,9 +48,15 @@ jobs:
                      GIT_CONFIG_KEY_0='http.https://github.com/.extraheader',
                      GIT_CONFIG_VALUE_0='AUTHORIZATION: basic ' + base64.b64encode(('x-access-token:' + token).encode()).decode())
           root = pathlib.Path(os.environ['RUNNER_TEMP']) / 'aoh3-private/source'
-          subprocess.run(['git', 'clone', '--no-checkout', 'https://github.com/zhui9808-netizen/codex-test.git', str(root)], env=env, check=True)
+          # Fetch the pinned source with its complete ancestor history. Private
+          # evidence lives on unrelated backup branches and is not a build input.
+          # No shallow history or partial blobs: offline baseline audits stay valid.
+          subprocess.run(['git', 'init', str(root)], check=True)
+          subprocess.run(['git', '-C', str(root), 'remote', 'add', 'origin', 'https://github.com/zhui9808-netizen/codex-test.git'], check=True)
+          subprocess.run(['git', '-C', str(root), 'fetch', '--no-tags', 'origin', source], env=env, check=True, timeout=900)
           subprocess.run(['git', '-C', str(root), 'checkout', '--detach', source], check=True)
           assert subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD']).decode().strip() == source
+          assert subprocess.check_output(['git', '-C', str(root), 'rev-parse', '--is-shallow-repository']).decode().strip() == 'false'
           PY
           then
             echo 'Private source checkout failed. No source or private log was published.'
