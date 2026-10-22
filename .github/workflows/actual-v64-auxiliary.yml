@@ -1,4 +1,4 @@
-name: Candidate v64 formation regression
+name: Actual v64 remaining mechanism diagnostics
 on:
   push:
     branches: [main]
@@ -31,7 +31,7 @@ jobs:
           from pathlib import Path
           import base64,hashlib,json,os,subprocess,sys,zipfile
           root=Path(os.environ['RUNNER_TEMP'])/'aoh3-actual-auxiliary';repo='zhui9808-netizen/codex-test'
-          source='cbd521e46cff994ada08d241b8b84148b0750fc1';digest='d2d6135b0fb8c4292495996e8e989c042a6abf597e5294b695bd1da330d5f3c9';runner_digest='ce79fc424cf64aad7fc756832729235725fbc98fd3e298a83b97b953fd76d8db'
+          source='460e5a881bf6e48a364a41fb6fc0ef8ec39765e7';digest='498f48121e7e3eada6fb6417dd08f9ae39501a1a6d68981818a07ea73cc63edc';runner_digest='557411502ec47ee102d4758f1dbeec72f5a463ac4e5556ec0124d12975ac788b'
           assert os.environ.get('GH_TOKEN')
           info=json.loads(subprocess.check_output(['gh','api','repos/'+repo]));assert info['private'] is True
           env=dict(os.environ);env.update(GIT_TERMINAL_PROMPT='0',GIT_CONFIG_COUNT='1',GIT_CONFIG_KEY_0='http.https://github.com/.extraheader',GIT_CONFIG_VALUE_0='AUTHORIZATION: basic '+base64.b64encode(('x-access-token:'+os.environ['GH_TOKEN']).encode()).decode())
@@ -51,7 +51,7 @@ jobs:
           sys.exit(subprocess.run([sys.executable,str(path),str(bundle),str(root/'run')]).returncode)
           PY
           then
-            echo 'Candidate formation probe passed; full evidence retained privately and read back.'
+            echo 'Actual APK auxiliary probes passed; full evidence retained privately and read back.'
           else
             if test -f "$auxiliary_root/run/receipt.json"; then
               echo 'Auxiliary probes found a failure; full evidence retained privately and read back.'
