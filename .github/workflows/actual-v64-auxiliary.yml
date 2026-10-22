@@ -1,4 +1,4 @@
-name: Actual v64 auxiliary diagnostics
+name: Candidate v64 formation regression
 on:
   push:
     branches: [main]
@@ -31,7 +31,7 @@ jobs:
           from pathlib import Path
           import base64,hashlib,json,os,subprocess,sys,zipfile
           root=Path(os.environ['RUNNER_TEMP'])/'aoh3-actual-auxiliary';repo='zhui9808-netizen/codex-test'
-          source='36419b49cf42d01f170f4da6f07cde0dba654b0d';digest='d986fef193a8de2676feacf0569aafe708f5261ab83666050190507c6449938d';runner_digest='50ae80e0ec2feccd61bd4a2e71f6eecf1101da4ec2eacbe38854f7e523609dc6'
+          source='cbd521e46cff994ada08d241b8b84148b0750fc1';digest='d2d6135b0fb8c4292495996e8e989c042a6abf597e5294b695bd1da330d5f3c9';runner_digest='ce79fc424cf64aad7fc756832729235725fbc98fd3e298a83b97b953fd76d8db'
           assert os.environ.get('GH_TOKEN')
           info=json.loads(subprocess.check_output(['gh','api','repos/'+repo]));assert info['private'] is True
           env=dict(os.environ);env.update(GIT_TERMINAL_PROMPT='0',GIT_CONFIG_COUNT='1',GIT_CONFIG_KEY_0='http.https://github.com/.extraheader',GIT_CONFIG_VALUE_0='AUTHORIZATION: basic '+base64.b64encode(('x-access-token:'+os.environ['GH_TOKEN']).encode()).decode())
@@ -51,7 +51,7 @@ jobs:
           sys.exit(subprocess.run([sys.executable,str(path),str(bundle),str(root/'run')]).returncode)
           PY
           then
-            echo 'Actual APK auxiliary probes passed; full evidence retained privately and read back.'
+            echo 'Candidate formation probe passed; full evidence retained privately and read back.'
           else
             if test -f "$auxiliary_root/run/receipt.json"; then
               echo 'Auxiliary probes found a failure; full evidence retained privately and read back.'
@@ -70,7 +70,6 @@ jobs:
           auxiliary_root="$RUNNER_TEMP/aoh3-actual-auxiliary"
           if test -f "$auxiliary_root/run/receipt.json"; then exit 0; fi
           if test -f "$auxiliary_root/bootstrap.log"; then
-            test "$(gh api repos/zhui9808-netizen/codex-test --jq .private)" = true
             tag="v64-auxiliary-bootstrap-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
             if gh release create "$tag" "$auxiliary_root/bootstrap.log" --repo zhui9808-netizen/codex-test --title 'Private auxiliary bootstrap failure' --notes 'Raw diagnostics only; no test completion claim.' >"$auxiliary_root/bootstrap-retention.log" 2>&1; then
               echo 'Bootstrap failure log uploaded to the private evidence repository.'
