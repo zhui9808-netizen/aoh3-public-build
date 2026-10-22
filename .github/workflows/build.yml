@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 env:
   # The publication tool replaces this one sentinel with the reviewed private SHA.
-  AOH_CI_SOURCE: 'e157f2f1cc0859d4ee09b0c935d33e17fff7ef36'
+  AOH_CI_SOURCE: '98838346c10dced3883e71ffd7224b204360803a'
 jobs:
   pair:
     if: github.repository == 'zhui9808-netizen/aoh3-public-build' && github.ref == 'refs/heads/main'
