@@ -1,0 +1,210 @@
+name: Publish reviewed v70 APK pair
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/publish-v70.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: aoh3-reviewed-v70-promotion
+  cancel-in-progress: false
+jobs:
+  promote:
+    if: github.repository == 'zhui9808-netizen/aoh3-public-build' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Fetch only the frozen accepted APK pair
+        env:
+          GH_TOKEN: ${{ secrets.BUILD_SOURCE_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          python3 - <<'PY'
+          PLAN64 = 'eyJzb3VyY2UiOiAiZjk5Zjg1ZDc0NzY5ZmVjNjgxYjVhYWVlYTk3MjY4ZjkxYTI5ZmI2YyIsICJ0cmVlIjogImFmN2ZkNGVmODgxMjFiZmUyOWM4NWE4MWQ3ODdjYWVkOTU2MTU4MzIiLCAibGF1bmNoZXIiOiAiMGUxZWNhMzAzYjRkN2MwZjFjN2JlMzRkODc2OGU0ZmRjN2NjMWNiYSIsICJidWlsZFJ1biI6IDQwMTMzOTc2MjU4LCAicHJpdmF0ZVJlbGVhc2UiOiA0MjMwMjY5NDgsICJ0YWciOiAidjcwLTEwNDAtMjAyNjEwMjUiLCAidGl0bGUiOiAi5Y6G5Y+y5pe25LujMyDogZTmnLogdjcwIC8g5pyN5Yqh56uvIDEwNDAiLCAiYm9keSI6ICLlrqLmiLfnq68gdjcwIOS4juaJi+acuuacjeWKoeerryAxMDQwIOmFjeWll+abtOaWsO+8jOayv+eUqOWOn+etvuWQjeOAguivt+abtOaWsOS4pOerr+WQjuaWsOW7uuaIv+mXtOOAglxuXG7mnKzmrKHkv67lpI3np5HmioDmoJHnlYzpnaLph43lu7rmtojogJfop4TliJnpmo/mnLrmlbDjgIHlt7LlsIHmibnmrKHooqvmmL7npLrosIPpgJ/mlLnlj5jjgIHmiJjkuonnqpflj6PlvJXnlKjlt7Lnu5PmnZ/miJjkuonjgIHlpLHmlYjlu7rnrZHpgInmi6nvvIzku6Xlj4rpm7blhpvlm6LkuIrpmZDpgKDmiJDpnZ7mnInpmZDotYTmupDnmoTpl67popjvvJvlh4/lsJHmgaLlpI3ov4fnqIvkuK3nmoTlpKflnZflhoXlrZjlia/mnKzvvIzmlq3lvIDml6fmmL7npLrpgILphY3lmajlr7npgIDlvbnkvJror53lkozml6flvJXmk47nmoTkv53nlZnpk77ku6Xkv67lpI3ph43lpI3mgaLlpI0gT09N77yM5L+u5aSN6YeN6L+e57ut5Lyg44CB5Y6G5Y+y5om55qyh5Y+R6YCB5Y+K5Li75Yqo6YCA5Ye66K6w5b2V44CC5Y2V5Liq5Y+X5o6n5LiW55WM44CBMjU2IOWIhueJh+i9ruaNouagoemqjOOAgTIwNDgg5om55a6M5pW05qOA5p+l5Y+K6Zu25Lq65Li65om55qyh562J5b6F5L+d5oyB5LiN5Y+Y44CCXG5cbuesrCA1MzjjgIExNDk2MuOAgTI4NjYwIOaJueW3sueUqOWOn+Wni+i+k+WFpeWkjeeOsOenkeaKgOagkeinpuWPkeeahOWOhuWPsumUmeivr+WTiOW4jO+8jOW5tumqjOivgeS/ruWkjeWQjuS4juWOn+S4u+acuuS4gOiHtOOAguS4i+i9veWbnuivu+eahOi/meS7veWunumZheetvuWQjSBBUEsg5Y+m6YCa6L+H5Lmd57uE5qGM6Z2i5a2X6IqC56CB5qOA5p+l77yM5YyF5ous56ysIDUzOC8yODY2MCDljp/lp4vph43mlL7jgIHkuInnp43np5HmioDmoJHlhaXlj6PjgIHosIPpgJ/nqb/mj5LjgIHmiJjkuonpgoDor7fjgIHmiJjkuonliJfooajlpLHmlYjooYzlkozljYHlpITlpLHmlYjlu7rnrZHpgInmi6nvvJs1MTIgTWlCIOWghuWGhei/nue7reWFq+asoeWunumZheaBouWkjeWbnuiwg+mAmui/h+OAgua4uOaIj+inhOWImeS4juiBlOacuumAu+i+keWPluiHqiBBUEsg5a2X6IqC56CB77yM5L2/55So5bey5qC46aqM55qE5qGM6Z2i6L+Q6KGM6YCC6YWN77yM5rKh5pyJ5Y+g5Yqg55Sf5Lqn5rqQ56CB5YCZ6YCJ44CCXG5cbui/meS6m+aYr+ahjOmdoiBKVk0g5qOA5p+l77yM5LiN5pivIEFuZHJvaWQgQVJUL0dQVeOAgeWNgeS6jOWPsOecn+acuuaIlui3qOWFrOe9keWQnuWQkOmqjOaUtuOAguesrCAwLzM4MiDmraXnjrDlnLrmjqjov5votoXml7bjgIHml6DmoIggT09NIOeahOWFqOmDqOaIkOWboOOAgemDqOWIhue8uuWksei+k+WFpeeahOWOhuWPsuWIhuatp+S7jeacquWFs+mXre+8m+eOsOS7o+S4lueVjOW9leWxj+S4reeahOWunumZheihjOWGm+W3ruW8guS7jeW+heWQjOWcuuaZr+ecn+acuuWkjeaguOOAguayoeacieWuo+ensOaXpeW/l+S4reaJgOaciemXrumimOW3sue7j+ino+WGs++8jOS5n+ayoeacieaJv+ivuuaJgOaciee9kee7nOi+vuWIsOavj+enkuWHoOWNgeWFhuOAglxuXG7lkIzmnaHku7blrp7pmYUgREVYIOahjOmdouWvueeFp++8iOacquS9v+eUqCAtWGJhdGNo77yb5q+P5qC85Li65Zub6L2u5Lit5L2N5pWw55qE5Lit5L2N5pWw77yM5Y2V5L2NIG1z77yJ77yaXG5cbnwg56qX5Y+jIHwg6Lev5b6EIHwgdjY5IHwgdjcwIHxcbnwgLS0tIHwgLS0tIHwgLS0tOiB8IC0tLTogfFxufCAzMiDmibnvvIzmjpLpmaTliY0gOCDmibkgfCDlvJXmk47nm7TmjqXmjqjov5sgfCAzOS4zNDYgfCAyOC40MDIgfFxufCAzMiDmibnvvIzmjpLpmaTliY0gOCDmibkgfCDmjqjov5vlj4rmmL7npLrlh4blpIcv6K+75Y+WIHwgNTguODEyIHwgNTMuODYzIHxcbnwgOTYg5om577yM5o6S6Zmk5YmNIDI0IOaJuSB8IOW8leaTjuebtOaOpeaOqOi/myB8IDE5Ljk4NCB8IDE5LjYyOSB8XG58IDk2IOaJue+8jOaOkumZpOWJjSAyNCDmibkgfCDmjqjov5vlj4rmmL7npLrlh4blpIcv6K+75Y+WIHwgNDUuNTYyIHwgMzcuNzQ3IHxcblxu5pys5qyh6ZW/56qX5Y+j55u05o6l5o6o6L+b55qE5Lit5L2N5pWw5beu5byC5b6I5bCP77yM5LiU5Y2V6L2u5rOi5Yqo6L6D5aSn77yb55+t56qX5Y+j55u05o6l5o6o6L+b55qE5pyA5Z2P5om55qyh55SxIDUzLjEwMSBtcyDljYfoh7MgNjguMTEyIG1z77yM5YiG6YWN6YeP5rGH5oC75pyA5aSn5aKe5Yqg57qmIDEuMzcl44CC6L+Z5Lqb5LiN5Yip57uT5p6c5LiA5bm25L+d55WZ77yM5LiN6IO956ew5omA5pyJ5oCn6IO95oyH5qCH6YO95pS55ZaE77yM5Lmf5LiN6IO95o2u5q2k5om/6K+655yf5py65bin546H44CCXG5cbuWQhOi9ruS4reS9jeaVsOOAgeacgOWdj+aJueasoeWSjOWIhumFjemHj+axh+aAu+ingSB2ZXJpZmljYXRpb24uanNvbu+8m+WujOaVtOWOn+Wni+e7k+aenOWPpuihjOS/neWtmO+8jOWQhOmhueW3ruW8guWmguWunuS/neeVme+8jOS4jeWuo+ensOWFqOmdouaPkOmAn+OAgui/meS6m+aVsOWAvOS4jeetieWQjOaJi+acuuW4p+aXtumXtOOAglxuXG7kuIvovb3kuIvmlrnkuKTkuKogQVBL77ybU0hBMjU2U1VNUy50eHQg5Y+v5qC46aqM6ZmE5Lu244CC5YWs5byA6aG15Y+q5YyF5ZCr5a6J6KOF5YyF5LiO5b+F6KaB5qCh6aqM6K6w5b2V77yM5Y6f5aeL6K+K5pat5ZKM5rWL6K+V5Y6f5Lu25L+d5a2Y5Zyo56eB5pyJ5LuT5bqT44CCXG4iLCAidmVyaWZpY2F0aW9uIjogeyJzb3VyY2VDb21taXQiOiAiZjk5Zjg1ZDc0NzY5ZmVjNjgxYjVhYWVlYTk3MjY4ZjkxYTI5ZmI2YyIsICJzb3VyY2VUcmVlIjogImFmN2ZkNGVmODgxMjFiZmUyOWM4NWE4MWQ3ODdjYWVkOTU2MTU4MzIiLCAiYnVpbGRSdW5JZCI6IDQwMTMzOTc2MjU4LCAiY2xpZW50VmVyc2lvbkNvZGUiOiA3MCwgInNlcnZlclZlcnNpb25Db2RlIjogMTA0MCwgImNlcnRpZmljYXRlU2hhMjU2IjogIjU1ZDQxMDJjMmI0OGJiNmNkMmExZmVjOGU2YzdiNGFlZjY4MDQwZDAyYWQ2NjFkYjY4YWFmZWQwN2E4Yzk0OTUiLCAiYW5kcm9pZEV4ZWN1dGVkIjogZmFsc2UsICJncHVFeGVjdXRlZCI6IGZhbHNlLCAid2FuVGhyb3VnaHB1dFRlc3RlZCI6IGZhbHNlLCAicGVyZm9ybWFuY2UiOiBbeyJjb3VudCI6IDMyLCAibW9kZSI6ICJvd25lZCIsICJ2NjkiOiB7Im1lZGlhbk9mUnVuTWVkaWFuc01pbGxpcyI6IDM5LjM0NTUsICJydW5NZWRpYW5zTWlsbGlzIjogWzQzLjcwNTUsIDI3LjY0MDUsIDM1LjUyODQ5OTk5OTk5OTk5NCwgNDMuMTYyNV0sICJhbGxvY2F0aW9uTWVkaWFuQnl0ZXMiOiA2MjQ1MzMyLjAsICJ3b3JzdE1pbGxpcyI6IDUzLjEwMX0sICJ2NzAiOiB7Im1lZGlhbk9mUnVuTWVkaWFuc01pbGxpcyI6IDI4LjQwMjI1MDAwMDAwMDAwMiwgInJ1bk1lZGlhbnNNaWxsaXMiOiBbMjguNDE3NSwgMzUuOTU0LCAyOC4zODcsIDI4LjIzOF0sICJhbGxvY2F0aW9uTWVkaWFuQnl0ZXMiOiA2MjUwNzA2LjAsICJ3b3JzdE1pbGxpcyI6IDY4LjExMn0sICJtZWRpYW5DaGFuZ2VQZXJjZW50IjogLTI3LjgxMzIxODc5MjQ5MjE0NCwgImFsbG9jYXRpb25DaGFuZ2VQZXJjZW50IjogMC4wODYwNDgyNjc3MzAxOTg4fSwgeyJjb3VudCI6IDMyLCAibW9kZSI6ICJicmlkZ2UtcHJlc2VudGVkIiwgInY2OSI6IHsibWVkaWFuT2ZSdW5NZWRpYW5zTWlsbGlzIjogNTguODEyLCAicnVuTWVkaWFuc01pbGxpcyI6IFs0NC4yNDc1LCA1NS43ODUsIDYyLjA2ODUsIDYxLjgzOV0sICJhbGxvY2F0aW9uTWVkaWFuQnl0ZXMiOiAxMDUwNzY4Ni4wLCAid29yc3RNaWxsaXMiOiAxMDEuMjk4fSwgInY3MCI6IHsibWVkaWFuT2ZSdW5NZWRpYW5zTWlsbGlzIjogNTMuODYzLCAicnVuTWVkaWFuc01pbGxpcyI6IFs0MC45NjIsIDU1LjAwMTUsIDUyLjcyNDUsIDU1LjIxOTVdLCAiYWxsb2NhdGlvbk1lZGlhbkJ5dGVzIjogMTA2NTIwNzQuMCwgIndvcnN0TWlsbGlzIjogODMuNjYyfSwgIm1lZGlhbkNoYW5nZVBlcmNlbnQiOiAtOC40MTQ5NDkzMzAwNjg2ODksICJhbGxvY2F0aW9uQ2hhbmdlUGVyY2VudCI6IDEuMzc0MTE3OTU1MTgwNjA5M30sIHsiY291bnQiOiA5NiwgIm1vZGUiOiAib3duZWQiLCAidjY5IjogeyJtZWRpYW5PZlJ1bk1lZGlhbnNNaWxsaXMiOiAxOS45ODQsICJydW5NZWRpYW5zTWlsbGlzIjogWzE5LjcxMiwgMjAuMjU2LCAxOS41OTg1LCAzMC4wNTZdLCAiYWxsb2NhdGlvbk1lZGlhbkJ5dGVzIjogNTEyOTI3OC4wLCAid29yc3RNaWxsaXMiOiA3Ny42NzF9LCAidjcwIjogeyJtZWRpYW5PZlJ1bk1lZGlhbnNNaWxsaXMiOiAxOS42Mjg5OTk5OTk5OTk5OTgsICJydW5NZWRpYW5zTWlsbGlzIjogWzE1LjM3Njk5OTk5OTk5OTk5OSwgMTUuMjc5LCAyNC4zNzY1LCAyMy44ODFdLCAiYWxsb2NhdGlvbk1lZGlhbkJ5dGVzIjogNTEyOTQ3OC4wLCAid29yc3RNaWxsaXMiOiA3MC43MTR9LCAibWVkaWFuQ2hhbmdlUGVyY2VudCI6IC0xLjc3NjQyMTEzNjkwOTU0NSwgImFsbG9jYXRpb25DaGFuZ2VQZXJjZW50IjogMC4wMDM4OTkxODQyNTE2NTQ0NzV9LCB7ImNvdW50IjogOTYsICJtb2RlIjogImJyaWRnZS1wcmVzZW50ZWQiLCAidjY5IjogeyJtZWRpYW5PZlJ1bk1lZGlhbnNNaWxsaXMiOiA0NS41NjIsICJydW5NZWRpYW5zTWlsbGlzIjogWzQ1Ljk0MywgMzQuNjczNSwgNDguMTExNSwgNDUuMTgxXSwgImFsbG9jYXRpb25NZWRpYW5CeXRlcyI6IDExMDI1NDk4LjAsICJ3b3JzdE1pbGxpcyI6IDg4LjY1NX0sICJ2NzAiOiB7Im1lZGlhbk9mUnVuTWVkaWFuc01pbGxpcyI6IDM3Ljc0Njc1LCAicnVuTWVkaWFuc01pbGxpcyI6IFs0MS45NjcsIDMzLjU1NiwgMzEuOTY5NSwgNDEuOTM3NV0sICJhbGxvY2F0aW9uTWVkaWFuQnl0ZXMiOiAxMTA4OTg2NC4wLCAid29yc3RNaWxsaXMiOiA4NS4xOTR9LCAibWVkaWFuQ2hhbmdlUGVyY2VudCI6IC0xNy4xNTMwMDAzMDcyNzM2LCAiYWxsb2NhdGlvbkNoYW5nZVBlcmNlbnQiOiAwLjU4Mzc5MjIyNDE2OTgyMTJ9XSwgInRlc3RzIjogeyJhY3R1YWxJbmNpZGVudFByb2JlR3JvdXBzIjogOSwgImFjdHVhbFJlcGVhdGVkRnVsbFJlc3RvcmVzIjogOCwgImRpcmVjdEFuZFByZXNlbnRlZFBlcmZvcm1hbmNlVHJpYWxzIjogMzIsICJhY3R1YWxTaWduZWREZXhSZWFkYmFja1Bhc3NlZCI6IHRydWUsICJvcmlnaW5hbDUzOFByZWZpeFBhc3NlZCI6IHRydWUsICJvcmlnaW5hbDI4NjYwUHJlZml4UGFzc2VkIjogdHJ1ZSwgInN0YWxlQnVpbGRpbmdTZWxlY3Rpb25QYXNzZWQiOiB0cnVlLCAid2FySW52aXRhdGlvblBhc3NlZCI6IHRydWUsICJzdGFsZVdvcmxkV2FyTGlzdFBhc3NlZCI6IHRydWUsICJzcGVlZENhY2hlQW5kWmVyb0ludGVydmFsUGFzc2VkIjogdHJ1ZSwgInJlc3RvcmVzVXNlZDUxMk1pQkhlYXAiOiB0cnVlfSwgInVucmVzb2x2ZWQiOiBbIuesrCAwIOatpeWPiuesrCAzODIg5q2lIGNvbXB1dGUtdGltZW91dCDlsJrnvLrnjrDlnLrlrqLmiLfnq6/nur/nqIsv6LCD5bqm6K+B5o2u77ybMzgyIOeahOWOn+WniyAxMjYg5om55YmN57yA6YeN5pS+5LiA6Ie077yM5Lik5Liq5b6F5omn6KGM6K6h5YiS5Y+v566X5a6M77yM5pyq5aSN546w55yf5py65YGc5rue44CCIiwgIjUxMiBNaUIg6L+e57ut5oGi5aSN5LiT6aG56YCa6L+H5LiN5Luj6KGo5omA5pyJIE9PTSDlt7LmjpLpmaTvvJvml6DmoIggT09NIOWSjOecn+acuumVv+acn+WghuWinumVv+S7jeacquWujOaIkOmqjOaUtuOAgiIsICIxMjMwMC8xNzA0MCDmnInkuLsgUk5HIOWNleasoeiwg+eUqOW3ruW8guivgeaNru+8jOS9huWOhuWPsuWFt+S9k+inpuWPkeeVjOmdouWwmuacquWUr+S4gOivgeaYju+8m+Wbm+adoeWOhuWPsuWIhuatp+S7jee8uuWPr+ihlOaOpeeahOaVhemanOWJjeW/q+eFp+OAgei/nue7reWwgeWumui+k+WFpeaIlueOsOWcuueKtuaAgeOAguWIneWniyBKU09OIOS4lueVjOW3suaguOmqjO+8jOS9huS4jeiDvei3qOi2iuS4remXtOiusOW9lee8uuWPo+OAgiIsICLnjrDku6PkuJbnlYzlkIzovpPlhaXot6/nur/lr7nnhafkuIDoh7TvvIzkvYbnlKjmiLfnjrDku6PliafmnKzlvZXlsY/kuK3nmoTlrp7pmYXooYzlhpvlt67lvILku43lvoXlkIzlnLrmma/nnJ/mnLrlpI3moLjjgIIiLCAi5pyq5ZyoIE5lbzMg6aqM5pS25aSa5oi/6Ze05a656YeP77yM5pyq5Zyo5a6e6ZmF6Leo5YWs572R6ZO+6Lev6aqM6K+B5q+P56eS5Yeg5Y2BIE1pQu+8jOacquaJp+ihjOaWsOeJiOacrOWNgeS6jOWPsOecn+acuumVv+a1i+OAgiIsICIwMjE5IOaWsOWinuS4ieasoeWFpeWcuuacquWujOaIkO+8muS4gOasoeacieS4u+WKqCBkZXRhY2gg6K6w5b2V77yM5Y+m5Lik5qyh5Li6IHJlYWR5IOWJjeaWrei/nu+8m+ayoeacieWuouaIt+err+ivgeaNruWIpOWumuWQjuS4pOasoeeahOaWrei/nuWOn+WboOOAgiJdLCAiZm9ybWF0IjogImFvaDMtcmV2aWV3ZWQtcHVibGljLXY3MC12MiIsICJhY3R1YWxTaWduZWRBcGtzVmVyaWZpZWQiOiB0cnVlLCAicHJpdmF0ZUV2aWRlbmNlRnVsbFJlYWRiYWNrIjogdHJ1ZSwgInByaXZhdGVFdmlkZW5jZUFyY2hpdmVTaGEyNTYiOiAiYmE0YmExZDMyNDQxYmZkMzUyN2E1ZDk0ODJkNDJjZjQ2N2Y1ZjAxMmIyOGMyZmE4MzZhYzExMTI3NDNlMWI1ZCIsICJmaWxlcyI6IHsiYW9oMy1tdWx0aXBsYXllci1jbGllbnQuYXBrIjogeyJieXRlcyI6IDc4MDk5MjU5MiwgInNoYTI1NiI6ICI1NWVhMGFlZjk4ODQyNGExMzhlMzNjM2RjMzE4NzkwNmI2NjE5NDA2MWQ2YzJmODU3NWI2YWViYzEyYzAxODMwIn0sICJhb2gzLXBob25lLXNlcnZlci5hcGsiOiB7ImJ5dGVzIjogODQ0NTM5NDA3LCAic2hhMjU2IjogIjBkNjE3NDkxODFiMGJmNjEwNmY3MWIwODA1ZDdkNGUyOWM0ODY0YWM2MTY2N2EwNzlhYjM5ZjA3ZWQwM2FmMTgifX19LCAiYXBrcyI6IHsiYW9oMy1tdWx0aXBsYXllci1jbGllbnQuYXBrIjogeyJhc3NldElkIjogNjczNTExNzE2LCAiYnl0ZXMiOiA3ODA5OTI1OTIsICJzaGEyNTYiOiAiNTVlYTBhZWY5ODg0MjRhMTM4ZTMzYzNkYzMxODc5MDZiNjYxOTQwNjFkNmMyZjg1NzViNmFlYmMxMmMwMTgzMCJ9LCAiYW9oMy1waG9uZS1zZXJ2ZXIuYXBrIjogeyJhc3NldElkIjogNjczNTExNzIwLCAiYnl0ZXMiOiA4NDQ1Mzk0MDcsICJzaGEyNTYiOiAiMGQ2MTc0OTE4MWIwYmY2MTA2ZjcxYjA4MDVkN2Q0ZTI5YzQ4NjRhYzYxNjY3YTA3OWFiMzlmMDdlZDAzYWYxOCJ9fX0='
+
+          import base64, hashlib, json, os, pathlib, subprocess
+          plan = json.loads(base64.b64decode(PLAN64))
+          public = 'zhui9808-netizen/aoh3-public-build'
+          private = 'zhui9808-netizen/codex-test'
+          stage = pathlib.Path(os.environ['RUNNER_TEMP']) / 'aoh3-reviewed-promotion'
+          def api(path, value=None, optional=False):
+              command = ['gh', 'api', path]
+              if value is not None: command += ['--method', 'POST', '--input', '-']
+              result = subprocess.run(command, input=None if value is None else json.dumps(value).encode(), capture_output=True)
+              if result.returncode:
+                  if optional and value is None:
+                      try: missing = json.loads(result.stdout)
+                      except Exception: missing = {}
+                      if missing.get('status') == '404': return None
+                  raise RuntimeError('GitHub metadata operation failed')
+              return json.loads(result.stdout)
+          def sha(path):
+              with path.open('rb') as stream: return hashlib.file_digest(stream, 'sha256').hexdigest()
+          def encoded(value): return (json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False) + '\n').encode()
+          def stream_asset(repo, asset, output=None):
+              digest = hashlib.sha256(); size = 0
+              proc = subprocess.Popen(['gh', 'api', 'repos/' + repo + '/releases/assets/' + str(asset), '-H', 'Accept: application/octet-stream'], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+              try:
+                  while block := proc.stdout.read(2**20):
+                      size += len(block); digest.update(block)
+                      if output is not None: output.write(block)
+                  if proc.wait() != 0: raise RuntimeError('Release asset transfer failed')
+              finally:
+                  if proc.poll() is None: proc.kill(); proc.wait()
+              return size, digest.hexdigest()
+          verification = encoded(plan['verification'])
+          expected = dict(plan['apks'])
+          expected['verification.json'] = {'bytes': len(verification), 'sha256': hashlib.sha256(verification).hexdigest()}
+          sums = ''.join(expected[n]['sha256'] + '  ' + n + '\n' for n in sorted(expected)).encode()
+          expected['SHA256SUMS.txt'] = {'bytes': len(sums), 'sha256': hashlib.sha256(sums).hexdigest()}
+          def validate_stage():
+              assert stage.is_dir() and not stage.is_symlink()
+              assert {p.name for p in stage.iterdir()} == set(expected)
+              for name, row in expected.items():
+                  path = stage / name
+                  assert path.is_file() and not path.is_symlink()
+                  assert path.stat().st_size == row['bytes'] and sha(path) == row['sha256']
+
+          assert api('repos/' + private)['private'] is True
+          assert api('repos/' + public)['private'] is False
+          run = api('repos/' + public + '/actions/runs/' + str(plan['buildRun']))
+          assert run['id'] == plan['buildRun'] and run['head_sha'] == plan['launcher']
+          assert run['status'] == 'completed' and run['conclusion'] == 'success'
+          commit = api('repos/' + private + '/git/commits/' + plan['source'])
+          assert commit['sha'] == plan['source'] and commit['tree']['sha'] == plan['tree']
+          release = api('repos/' + private + '/releases/' + str(plan['privateRelease']))
+          assert release['id'] == plan['privateRelease'] and not release['draft'] and release['prerelease']
+          assert release['target_commitish'] == plan['source']
+          stage.mkdir(mode=0o700, exist_ok=False)
+          for name, row in plan['apks'].items():
+              matches = [a for a in release['assets'] if a['id'] == row['assetId'] and a['name'] == name]
+              assert len(matches) == 1
+              remote = matches[0]
+              assert remote['state'] == 'uploaded' and remote['size'] == row['bytes']
+              assert remote['digest'] == 'sha256:' + row['sha256']
+              with (stage / name).open('xb') as output: size, digest = stream_asset(private, row['assetId'], output)
+              assert size == row['bytes'] and digest == row['sha256']
+          (stage / 'verification.json').write_bytes(verification)
+          (stage / 'SHA256SUMS.txt').write_bytes(sums)
+          validate_stage()
+          print('Reviewed APK pair downloaded and byte-verified. No private test archive staged.')
+
+          PY
+      - name: Publish after complete remote byte verification
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          python3 - <<'PY'
+          PLAN64 = 'eyJzb3VyY2UiOiAiZjk5Zjg1ZDc0NzY5ZmVjNjgxYjVhYWVlYTk3MjY4ZjkxYTI5ZmI2YyIsICJ0cmVlIjogImFmN2ZkNGVmODgxMjFiZmUyOWM4NWE4MWQ3ODdjYWVkOTU2MTU4MzIiLCAibGF1bmNoZXIiOiAiMGUxZWNhMzAzYjRkN2MwZjFjN2JlMzRkODc2OGU0ZmRjN2NjMWNiYSIsICJidWlsZFJ1biI6IDQwMTMzOTc2MjU4LCAicHJpdmF0ZVJlbGVhc2UiOiA0MjMwMjY5NDgsICJ0YWciOiAidjcwLTEwNDAtMjAyNjEwMjUiLCAidGl0bGUiOiAi5Y6G5Y+y5pe25LujMyDogZTmnLogdjcwIC8g5pyN5Yqh56uvIDEwNDAiLCAiYm9keSI6ICLlrqLmiLfnq68gdjcwIOS4juaJi+acuuacjeWKoeerryAxMDQwIOmFjeWll+abtOaWsO+8jOayv+eUqOWOn+etvuWQjeOAguivt+abtOaWsOS4pOerr+WQjuaWsOW7uuaIv+mXtOOAglxuXG7mnKzmrKHkv67lpI3np5HmioDmoJHnlYzpnaLph43lu7rmtojogJfop4TliJnpmo/mnLrmlbDjgIHlt7LlsIHmibnmrKHooqvmmL7npLrosIPpgJ/mlLnlj5jjgIHmiJjkuonnqpflj6PlvJXnlKjlt7Lnu5PmnZ/miJjkuonjgIHlpLHmlYjlu7rnrZHpgInmi6nvvIzku6Xlj4rpm7blhpvlm6LkuIrpmZDpgKDmiJDpnZ7mnInpmZDotYTmupDnmoTpl67popjvvJvlh4/lsJHmgaLlpI3ov4fnqIvkuK3nmoTlpKflnZflhoXlrZjlia/mnKzvvIzmlq3lvIDml6fmmL7npLrpgILphY3lmajlr7npgIDlvbnkvJror53lkozml6flvJXmk47nmoTkv53nlZnpk77ku6Xkv67lpI3ph43lpI3mgaLlpI0gT09N77yM5L+u5aSN6YeN6L+e57ut5Lyg44CB5Y6G5Y+y5om55qyh5Y+R6YCB5Y+K5Li75Yqo6YCA5Ye66K6w5b2V44CC5Y2V5Liq5Y+X5o6n5LiW55WM44CBMjU2IOWIhueJh+i9ruaNouagoemqjOOAgTIwNDgg5om55a6M5pW05qOA5p+l5Y+K6Zu25Lq65Li65om55qyh562J5b6F5L+d5oyB5LiN5Y+Y44CCXG5cbuesrCA1MzjjgIExNDk2MuOAgTI4NjYwIOaJueW3sueUqOWOn+Wni+i+k+WFpeWkjeeOsOenkeaKgOagkeinpuWPkeeahOWOhuWPsumUmeivr+WTiOW4jO+8jOW5tumqjOivgeS/ruWkjeWQjuS4juWOn+S4u+acuuS4gOiHtOOAguS4i+i9veWbnuivu+eahOi/meS7veWunumZheetvuWQjSBBUEsg5Y+m6YCa6L+H5Lmd57uE5qGM6Z2i5a2X6IqC56CB5qOA5p+l77yM5YyF5ous56ysIDUzOC8yODY2MCDljp/lp4vph43mlL7jgIHkuInnp43np5HmioDmoJHlhaXlj6PjgIHosIPpgJ/nqb/mj5LjgIHmiJjkuonpgoDor7fjgIHmiJjkuonliJfooajlpLHmlYjooYzlkozljYHlpITlpLHmlYjlu7rnrZHpgInmi6nvvJs1MTIgTWlCIOWghuWGhei/nue7reWFq+asoeWunumZheaBouWkjeWbnuiwg+mAmui/h+OAgua4uOaIj+inhOWImeS4juiBlOacuumAu+i+keWPluiHqiBBUEsg5a2X6IqC56CB77yM5L2/55So5bey5qC46aqM55qE5qGM6Z2i6L+Q6KGM6YCC6YWN77yM5rKh5pyJ5Y+g5Yqg55Sf5Lqn5rqQ56CB5YCZ6YCJ44CCXG5cbui/meS6m+aYr+ahjOmdoiBKVk0g5qOA5p+l77yM5LiN5pivIEFuZHJvaWQgQVJUL0dQVeOAgeWNgeS6jOWPsOecn+acuuaIlui3qOWFrOe9keWQnuWQkOmqjOaUtuOAguesrCAwLzM4MiDmraXnjrDlnLrmjqjov5votoXml7bjgIHml6DmoIggT09NIOeahOWFqOmDqOaIkOWboOOAgemDqOWIhue8uuWksei+k+WFpeeahOWOhuWPsuWIhuatp+S7jeacquWFs+mXre+8m+eOsOS7o+S4lueVjOW9leWxj+S4reeahOWunumZheihjOWGm+W3ruW8guS7jeW+heWQjOWcuuaZr+ecn+acuuWkjeaguOOAguayoeacieWuo+ensOaXpeW/l+S4reaJgOaciemXrumimOW3sue7j+ino+WGs++8jOS5n+ayoeacieaJv+ivuuaJgOaciee9kee7nOi+vuWIsOavj+enkuWHoOWNgeWFhuOAglxuXG7lkIzmnaHku7blrp7pmYUgREVYIOahjOmdouWvueeFp++8iOacquS9v+eUqCAtWGJhdGNo77yb5q+P5qC85Li65Zub6L2u5Lit5L2N5pWw55qE5Lit5L2N5pWw77yM5Y2V5L2NIG1z77yJ77yaXG5cbnwg56qX5Y+jIHwg6Lev5b6EIHwgdjY5IHwgdjcwIHxcbnwgLS0tIHwgLS0tIHwgLS0tOiB8IC0tLTogfFxufCAzMiDmibnvvIzmjpLpmaTliY0gOCDmibkgfCDlvJXmk47nm7TmjqXmjqjov5sgfCAzOS4zNDYgfCAyOC40MDIgfFxufCAzMiDmibnvvIzmjpLpmaTliY0gOCDmibkgfCDmjqjov5vlj4rmmL7npLrlh4blpIcv6K+75Y+WIHwgNTguODEyIHwgNTMuODYzIHxcbnwgOTYg5om577yM5o6S6Zmk5YmNIDI0IOaJuSB8IOW8leaTjuebtOaOpeaOqOi/myB8IDE5Ljk4NCB8IDE5LjYyOSB8XG58IDk2IOaJue+8jOaOkumZpOWJjSAyNCDmibkgfCDmjqjov5vlj4rmmL7npLrlh4blpIcv6K+75Y+WIHwgNDUuNTYyIHwgMzcuNzQ3IHxcblxu5pys5qyh6ZW/56qX5Y+j55u05o6l5o6o6L+b55qE5Lit5L2N5pWw5beu5byC5b6I5bCP77yM5LiU5Y2V6L2u5rOi5Yqo6L6D5aSn77yb55+t56qX5Y+j55u05o6l5o6o6L+b55qE5pyA5Z2P5om55qyh55SxIDUzLjEwMSBtcyDljYfoh7MgNjguMTEyIG1z77yM5YiG6YWN6YeP5rGH5oC75pyA5aSn5aKe5Yqg57qmIDEuMzcl44CC6L+Z5Lqb5LiN5Yip57uT5p6c5LiA5bm25L+d55WZ77yM5LiN6IO956ew5omA5pyJ5oCn6IO95oyH5qCH6YO95pS55ZaE77yM5Lmf5LiN6IO95o2u5q2k5om/6K+655yf5py65bin546H44CCXG5cbuWQhOi9ruS4reS9jeaVsOOAgeacgOWdj+aJueasoeWSjOWIhumFjemHj+axh+aAu+ingSB2ZXJpZmljYXRpb24uanNvbu+8m+WujOaVtOWOn+Wni+e7k+aenOWPpuihjOS/neWtmO+8jOWQhOmhueW3ruW8guWmguWunuS/neeVme+8jOS4jeWuo+ensOWFqOmdouaPkOmAn+OAgui/meS6m+aVsOWAvOS4jeetieWQjOaJi+acuuW4p+aXtumXtOOAglxuXG7kuIvovb3kuIvmlrnkuKTkuKogQVBL77ybU0hBMjU2U1VNUy50eHQg5Y+v5qC46aqM6ZmE5Lu244CC5YWs5byA6aG15Y+q5YyF5ZCr5a6J6KOF5YyF5LiO5b+F6KaB5qCh6aqM6K6w5b2V77yM5Y6f5aeL6K+K5pat5ZKM5rWL6K+V5Y6f5Lu25L+d5a2Y5Zyo56eB5pyJ5LuT5bqT44CCXG4iLCAidmVyaWZpY2F0aW9uIjogeyJzb3VyY2VDb21taXQiOiAiZjk5Zjg1ZDc0NzY5ZmVjNjgxYjVhYWVlYTk3MjY4ZjkxYTI5ZmI2YyIsICJzb3VyY2VUcmVlIjogImFmN2ZkNGVmODgxMjFiZmUyOWM4NWE4MWQ3ODdjYWVkOTU2MTU4MzIiLCAiYnVpbGRSdW5JZCI6IDQwMTMzOTc2MjU4LCAiY2xpZW50VmVyc2lvbkNvZGUiOiA3MCwgInNlcnZlclZlcnNpb25Db2RlIjogMTA0MCwgImNlcnRpZmljYXRlU2hhMjU2IjogIjU1ZDQxMDJjMmI0OGJiNmNkMmExZmVjOGU2YzdiNGFlZjY4MDQwZDAyYWQ2NjFkYjY4YWFmZWQwN2E4Yzk0OTUiLCAiYW5kcm9pZEV4ZWN1dGVkIjogZmFsc2UsICJncHVFeGVjdXRlZCI6IGZhbHNlLCAid2FuVGhyb3VnaHB1dFRlc3RlZCI6IGZhbHNlLCAicGVyZm9ybWFuY2UiOiBbeyJjb3VudCI6IDMyLCAibW9kZSI6ICJvd25lZCIsICJ2NjkiOiB7Im1lZGlhbk9mUnVuTWVkaWFuc01pbGxpcyI6IDM5LjM0NTUsICJydW5NZWRpYW5zTWlsbGlzIjogWzQzLjcwNTUsIDI3LjY0MDUsIDM1LjUyODQ5OTk5OTk5OTk5NCwgNDMuMTYyNV0sICJhbGxvY2F0aW9uTWVkaWFuQnl0ZXMiOiA2MjQ1MzMyLjAsICJ3b3JzdE1pbGxpcyI6IDUzLjEwMX0sICJ2NzAiOiB7Im1lZGlhbk9mUnVuTWVkaWFuc01pbGxpcyI6IDI4LjQwMjI1MDAwMDAwMDAwMiwgInJ1bk1lZGlhbnNNaWxsaXMiOiBbMjguNDE3NSwgMzUuOTU0LCAyOC4zODcsIDI4LjIzOF0sICJhbGxvY2F0aW9uTWVkaWFuQnl0ZXMiOiA2MjUwNzA2LjAsICJ3b3JzdE1pbGxpcyI6IDY4LjExMn0sICJtZWRpYW5DaGFuZ2VQZXJjZW50IjogLTI3LjgxMzIxODc5MjQ5MjE0NCwgImFsbG9jYXRpb25DaGFuZ2VQZXJjZW50IjogMC4wODYwNDgyNjc3MzAxOTg4fSwgeyJjb3VudCI6IDMyLCAibW9kZSI6ICJicmlkZ2UtcHJlc2VudGVkIiwgInY2OSI6IHsibWVkaWFuT2ZSdW5NZWRpYW5zTWlsbGlzIjogNTguODEyLCAicnVuTWVkaWFuc01pbGxpcyI6IFs0NC4yNDc1LCA1NS43ODUsIDYyLjA2ODUsIDYxLjgzOV0sICJhbGxvY2F0aW9uTWVkaWFuQnl0ZXMiOiAxMDUwNzY4Ni4wLCAid29yc3RNaWxsaXMiOiAxMDEuMjk4fSwgInY3MCI6IHsibWVkaWFuT2ZSdW5NZWRpYW5zTWlsbGlzIjogNTMuODYzLCAicnVuTWVkaWFuc01pbGxpcyI6IFs0MC45NjIsIDU1LjAwMTUsIDUyLjcyNDUsIDU1LjIxOTVdLCAiYWxsb2NhdGlvbk1lZGlhbkJ5dGVzIjogMTA2NTIwNzQuMCwgIndvcnN0TWlsbGlzIjogODMuNjYyfSwgIm1lZGlhbkNoYW5nZVBlcmNlbnQiOiAtOC40MTQ5NDkzMzAwNjg2ODksICJhbGxvY2F0aW9uQ2hhbmdlUGVyY2VudCI6IDEuMzc0MTE3OTU1MTgwNjA5M30sIHsiY291bnQiOiA5NiwgIm1vZGUiOiAib3duZWQiLCAidjY5IjogeyJtZWRpYW5PZlJ1bk1lZGlhbnNNaWxsaXMiOiAxOS45ODQsICJydW5NZWRpYW5zTWlsbGlzIjogWzE5LjcxMiwgMjAuMjU2LCAxOS41OTg1LCAzMC4wNTZdLCAiYWxsb2NhdGlvbk1lZGlhbkJ5dGVzIjogNTEyOTI3OC4wLCAid29yc3RNaWxsaXMiOiA3Ny42NzF9LCAidjcwIjogeyJtZWRpYW5PZlJ1bk1lZGlhbnNNaWxsaXMiOiAxOS42Mjg5OTk5OTk5OTk5OTgsICJydW5NZWRpYW5zTWlsbGlzIjogWzE1LjM3Njk5OTk5OTk5OTk5OSwgMTUuMjc5LCAyNC4zNzY1LCAyMy44ODFdLCAiYWxsb2NhdGlvbk1lZGlhbkJ5dGVzIjogNTEyOTQ3OC4wLCAid29yc3RNaWxsaXMiOiA3MC43MTR9LCAibWVkaWFuQ2hhbmdlUGVyY2VudCI6IC0xLjc3NjQyMTEzNjkwOTU0NSwgImFsbG9jYXRpb25DaGFuZ2VQZXJjZW50IjogMC4wMDM4OTkxODQyNTE2NTQ0NzV9LCB7ImNvdW50IjogOTYsICJtb2RlIjogImJyaWRnZS1wcmVzZW50ZWQiLCAidjY5IjogeyJtZWRpYW5PZlJ1bk1lZGlhbnNNaWxsaXMiOiA0NS41NjIsICJydW5NZWRpYW5zTWlsbGlzIjogWzQ1Ljk0MywgMzQuNjczNSwgNDguMTExNSwgNDUuMTgxXSwgImFsbG9jYXRpb25NZWRpYW5CeXRlcyI6IDExMDI1NDk4LjAsICJ3b3JzdE1pbGxpcyI6IDg4LjY1NX0sICJ2NzAiOiB7Im1lZGlhbk9mUnVuTWVkaWFuc01pbGxpcyI6IDM3Ljc0Njc1LCAicnVuTWVkaWFuc01pbGxpcyI6IFs0MS45NjcsIDMzLjU1NiwgMzEuOTY5NSwgNDEuOTM3NV0sICJhbGxvY2F0aW9uTWVkaWFuQnl0ZXMiOiAxMTA4OTg2NC4wLCAid29yc3RNaWxsaXMiOiA4NS4xOTR9LCAibWVkaWFuQ2hhbmdlUGVyY2VudCI6IC0xNy4xNTMwMDAzMDcyNzM2LCAiYWxsb2NhdGlvbkNoYW5nZVBlcmNlbnQiOiAwLjU4Mzc5MjIyNDE2OTgyMTJ9XSwgInRlc3RzIjogeyJhY3R1YWxJbmNpZGVudFByb2JlR3JvdXBzIjogOSwgImFjdHVhbFJlcGVhdGVkRnVsbFJlc3RvcmVzIjogOCwgImRpcmVjdEFuZFByZXNlbnRlZFBlcmZvcm1hbmNlVHJpYWxzIjogMzIsICJhY3R1YWxTaWduZWREZXhSZWFkYmFja1Bhc3NlZCI6IHRydWUsICJvcmlnaW5hbDUzOFByZWZpeFBhc3NlZCI6IHRydWUsICJvcmlnaW5hbDI4NjYwUHJlZml4UGFzc2VkIjogdHJ1ZSwgInN0YWxlQnVpbGRpbmdTZWxlY3Rpb25QYXNzZWQiOiB0cnVlLCAid2FySW52aXRhdGlvblBhc3NlZCI6IHRydWUsICJzdGFsZVdvcmxkV2FyTGlzdFBhc3NlZCI6IHRydWUsICJzcGVlZENhY2hlQW5kWmVyb0ludGVydmFsUGFzc2VkIjogdHJ1ZSwgInJlc3RvcmVzVXNlZDUxMk1pQkhlYXAiOiB0cnVlfSwgInVucmVzb2x2ZWQiOiBbIuesrCAwIOatpeWPiuesrCAzODIg5q2lIGNvbXB1dGUtdGltZW91dCDlsJrnvLrnjrDlnLrlrqLmiLfnq6/nur/nqIsv6LCD5bqm6K+B5o2u77ybMzgyIOeahOWOn+WniyAxMjYg5om55YmN57yA6YeN5pS+5LiA6Ie077yM5Lik5Liq5b6F5omn6KGM6K6h5YiS5Y+v566X5a6M77yM5pyq5aSN546w55yf5py65YGc5rue44CCIiwgIjUxMiBNaUIg6L+e57ut5oGi5aSN5LiT6aG56YCa6L+H5LiN5Luj6KGo5omA5pyJIE9PTSDlt7LmjpLpmaTvvJvml6DmoIggT09NIOWSjOecn+acuumVv+acn+WghuWinumVv+S7jeacquWujOaIkOmqjOaUtuOAgiIsICIxMjMwMC8xNzA0MCDmnInkuLsgUk5HIOWNleasoeiwg+eUqOW3ruW8guivgeaNru+8jOS9huWOhuWPsuWFt+S9k+inpuWPkeeVjOmdouWwmuacquWUr+S4gOivgeaYju+8m+Wbm+adoeWOhuWPsuWIhuatp+S7jee8uuWPr+ihlOaOpeeahOaVhemanOWJjeW/q+eFp+OAgei/nue7reWwgeWumui+k+WFpeaIlueOsOWcuueKtuaAgeOAguWIneWniyBKU09OIOS4lueVjOW3suaguOmqjO+8jOS9huS4jeiDvei3qOi2iuS4remXtOiusOW9lee8uuWPo+OAgiIsICLnjrDku6PkuJbnlYzlkIzovpPlhaXot6/nur/lr7nnhafkuIDoh7TvvIzkvYbnlKjmiLfnjrDku6PliafmnKzlvZXlsY/kuK3nmoTlrp7pmYXooYzlhpvlt67lvILku43lvoXlkIzlnLrmma/nnJ/mnLrlpI3moLjjgIIiLCAi5pyq5ZyoIE5lbzMg6aqM5pS25aSa5oi/6Ze05a656YeP77yM5pyq5Zyo5a6e6ZmF6Leo5YWs572R6ZO+6Lev6aqM6K+B5q+P56eS5Yeg5Y2BIE1pQu+8jOacquaJp+ihjOaWsOeJiOacrOWNgeS6jOWPsOecn+acuumVv+a1i+OAgiIsICIwMjE5IOaWsOWinuS4ieasoeWFpeWcuuacquWujOaIkO+8muS4gOasoeacieS4u+WKqCBkZXRhY2gg6K6w5b2V77yM5Y+m5Lik5qyh5Li6IHJlYWR5IOWJjeaWrei/nu+8m+ayoeacieWuouaIt+err+ivgeaNruWIpOWumuWQjuS4pOasoeeahOaWrei/nuWOn+WboOOAgiJdLCAiZm9ybWF0IjogImFvaDMtcmV2aWV3ZWQtcHVibGljLXY3MC12MiIsICJhY3R1YWxTaWduZWRBcGtzVmVyaWZpZWQiOiB0cnVlLCAicHJpdmF0ZUV2aWRlbmNlRnVsbFJlYWRiYWNrIjogdHJ1ZSwgInByaXZhdGVFdmlkZW5jZUFyY2hpdmVTaGEyNTYiOiAiYmE0YmExZDMyNDQxYmZkMzUyN2E1ZDk0ODJkNDJjZjQ2N2Y1ZjAxMmIyOGMyZmE4MzZhYzExMTI3NDNlMWI1ZCIsICJmaWxlcyI6IHsiYW9oMy1tdWx0aXBsYXllci1jbGllbnQuYXBrIjogeyJieXRlcyI6IDc4MDk5MjU5MiwgInNoYTI1NiI6ICI1NWVhMGFlZjk4ODQyNGExMzhlMzNjM2RjMzE4NzkwNmI2NjE5NDA2MWQ2YzJmODU3NWI2YWViYzEyYzAxODMwIn0sICJhb2gzLXBob25lLXNlcnZlci5hcGsiOiB7ImJ5dGVzIjogODQ0NTM5NDA3LCAic2hhMjU2IjogIjBkNjE3NDkxODFiMGJmNjEwNmY3MWIwODA1ZDdkNGUyOWM0ODY0YWM2MTY2N2EwNzlhYjM5ZjA3ZWQwM2FmMTgifX19LCAiYXBrcyI6IHsiYW9oMy1tdWx0aXBsYXllci1jbGllbnQuYXBrIjogeyJhc3NldElkIjogNjczNTExNzE2LCAiYnl0ZXMiOiA3ODA5OTI1OTIsICJzaGEyNTYiOiAiNTVlYTBhZWY5ODg0MjRhMTM4ZTMzYzNkYzMxODc5MDZiNjYxOTQwNjFkNmMyZjg1NzViNmFlYmMxMmMwMTgzMCJ9LCAiYW9oMy1waG9uZS1zZXJ2ZXIuYXBrIjogeyJhc3NldElkIjogNjczNTExNzIwLCAiYnl0ZXMiOiA4NDQ1Mzk0MDcsICJzaGEyNTYiOiAiMGQ2MTc0OTE4MWIwYmY2MTA2ZjcxYjA4MDVkN2Q0ZTI5YzQ4NjRhYzYxNjY3YTA3OWFiMzlmMDdlZDAzYWYxOCJ9fX0='
+
+          import base64, hashlib, json, os, pathlib, subprocess
+          plan = json.loads(base64.b64decode(PLAN64))
+          public = 'zhui9808-netizen/aoh3-public-build'
+          private = 'zhui9808-netizen/codex-test'
+          stage = pathlib.Path(os.environ['RUNNER_TEMP']) / 'aoh3-reviewed-promotion'
+          def api(path, value=None, optional=False):
+              command = ['gh', 'api', path]
+              if value is not None: command += ['--method', 'POST', '--input', '-']
+              result = subprocess.run(command, input=None if value is None else json.dumps(value).encode(), capture_output=True)
+              if result.returncode:
+                  if optional and value is None:
+                      try: missing = json.loads(result.stdout)
+                      except Exception: missing = {}
+                      if missing.get('status') == '404': return None
+                  raise RuntimeError('GitHub metadata operation failed')
+              return json.loads(result.stdout)
+          def sha(path):
+              with path.open('rb') as stream: return hashlib.file_digest(stream, 'sha256').hexdigest()
+          def encoded(value): return (json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False) + '\n').encode()
+          def stream_asset(repo, asset, output=None):
+              digest = hashlib.sha256(); size = 0
+              proc = subprocess.Popen(['gh', 'api', 'repos/' + repo + '/releases/assets/' + str(asset), '-H', 'Accept: application/octet-stream'], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+              try:
+                  while block := proc.stdout.read(2**20):
+                      size += len(block); digest.update(block)
+                      if output is not None: output.write(block)
+                  if proc.wait() != 0: raise RuntimeError('Release asset transfer failed')
+              finally:
+                  if proc.poll() is None: proc.kill(); proc.wait()
+              return size, digest.hexdigest()
+          verification = encoded(plan['verification'])
+          expected = dict(plan['apks'])
+          expected['verification.json'] = {'bytes': len(verification), 'sha256': hashlib.sha256(verification).hexdigest()}
+          sums = ''.join(expected[n]['sha256'] + '  ' + n + '\n' for n in sorted(expected)).encode()
+          expected['SHA256SUMS.txt'] = {'bytes': len(sums), 'sha256': hashlib.sha256(sums).hexdigest()}
+          def validate_stage():
+              assert stage.is_dir() and not stage.is_symlink()
+              assert {p.name for p in stage.iterdir()} == set(expected)
+              for name, row in expected.items():
+                  path = stage / name
+                  assert path.is_file() and not path.is_symlink()
+                  assert path.stat().st_size == row['bytes'] and sha(path) == row['sha256']
+
+          validate_stage()
+          assert api('repos/' + public)['private'] is False
+          # Explicitly pin the tag before creating a draft: a draft release alone need
+          # not create its Git reference. A pre-existing conflicting tag is never moved.
+          tag = api('repos/' + public + '/git/ref/tags/' + plan['tag'], optional=True)
+          if tag is None:
+              tag = api('repos/' + public + '/git/refs', {'ref':'refs/tags/' + plan['tag'],'sha':plan['launcher']})
+          assert tag['object']['type'] == 'commit' and tag['object']['sha'] == plan['launcher']
+          releases = []; seen = set()
+          for page in range(1, 101):
+              chunk = api('repos/' + public + '/releases?per_page=100&page=' + str(page))
+              assert type(chunk) is list
+              for value in chunk:
+                  assert value['id'] not in seen; seen.add(value['id'])
+                  if value['tag_name'] == plan['tag']: releases.append(value)
+              if len(chunk) < 100: break
+          else: raise RuntimeError('Release listing exceeded bound')
+          assert len(releases) <= 1
+          if releases:
+              release = api('repos/' + public + '/releases/' + str(releases[0]['id']))
+          else:
+              release = api('repos/' + public + '/releases', {'tag_name': plan['tag'], 'target_commitish': plan['launcher'], 'name': plan['title'], 'body': plan['body'], 'draft': True, 'prerelease': True})
+          def identity(value):
+              assert value['tag_name'] == plan['tag'] and value['target_commitish'] == plan['launcher']
+              assert value['name'] == plan['title'] and value['body'] == plan['body']
+              assert value['prerelease'] is True
+          def remote_assets(value, complete=False):
+              names = [a['name'] for a in value['assets']]
+              assert len(names) == len(set(names)) and set(names) <= set(expected)
+              if complete: assert set(names) == set(expected)
+              for a in value['assets']:
+                  e = expected[a['name']]
+                  assert a['state'] == 'uploaded' and a['size'] == e['bytes'] and a['digest'] == 'sha256:' + e['sha256']
+          identity(release); remote_assets(release)
+          if not release['draft']: remote_assets(release, True)
+          present = {a['name'] for a in release['assets']}
+          for name in sorted(set(expected) - present):
+              assert release['draft']
+              result = subprocess.run(['gh', 'release', 'upload', plan['tag'], str(stage / name), '--repo', public], capture_output=True)
+              if result.returncode: raise RuntimeError('Public APK asset upload failed; draft retained')
+          release = api('repos/' + public + '/releases/' + str(release['id']))
+          identity(release); remote_assets(release, True)
+          tag = api('repos/' + public + '/git/ref/tags/' + plan['tag'])['object']
+          assert tag['type'] == 'commit' and tag['sha'] == plan['launcher']
+          for asset in release['assets']:
+              size, digest = stream_asset(public, asset['id'])
+              assert size == expected[asset['name']]['bytes'] and digest == expected[asset['name']]['sha256']
+          validate_stage()
+          if release['draft']:
+              command = ['gh', 'api', 'repos/' + public + '/releases/' + str(release['id']), '--method', 'PATCH', '--input', '-']
+              result = subprocess.run(command, input=json.dumps({'draft': False}).encode(), capture_output=True)
+              if result.returncode: raise RuntimeError('Publication failed; verified draft retained')
+              release = json.loads(result.stdout)
+          identity(release); remote_assets(release, True); assert release['draft'] is False
+          print(release['html_url'])
+
+          PY
+      - name: Remove temporary APK copies
+        if: always()
+        shell: bash
+        run: rm -rf -- "$RUNNER_TEMP/aoh3-reviewed-promotion"
