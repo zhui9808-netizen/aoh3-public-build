@@ -53,40 +53,52 @@ jobs:
           metadata = {'sourceCommit': source, 'runId': os.environ['GITHUB_RUN_ID'], 'runAttempt': os.environ['GITHUB_RUN_ATTEMPT'], 'node': subprocess.check_output(['node', '--version']).decode().strip(), 'platform': os.uname().sysname, 'command': ['npm', 'test'], 'testFileCount': len(list((root / 'server/test').glob('*.test.mjs'))), 'cpuCount': os.cpu_count(), 'apkBuild': False}
           assert metadata['node'] == 'v22.14.0' and metadata['testFileCount'] == 99
           (evidence / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
-          began = time.monotonic()
-          timed_out = False
-          with (evidence / 'test.log').open('w') as log:
-              proc = subprocess.Popen(['npm', 'test'], cwd=root, env=dict(os.environ), stdout=log, stderr=log, start_new_session=True)
-              while proc.poll() is None:
-                  elapsed = time.monotonic() - began
-                  if elapsed >= 180:
-                      timed_out = True
-                      (evidence / 'processes-at-timeout.txt').write_bytes(subprocess.check_output(['ps', '-eo', 'pid,ppid,pgid,etimes,time,stat,comm']))
-                      os.killpg(proc.pid, signal.SIGTERM)
-                      try:
-                          proc.wait(timeout=5)
-                      except subprocess.TimeoutExpired:
-                          os.killpg(proc.pid, signal.SIGKILL)
-                          proc.wait(timeout=5)
-                      break
-                  time.sleep(2)
-          tap = (evidence / 'test.log').read_text()
-          counts = {k: int(v) for k, v in re.findall(r'^# (tests|pass|fail|cancelled|skipped|todo) (\d+)\s*$', tap, re.M)}
-          passed = proc.returncode == 0 and not timed_out and counts == {'tests': 1011, 'pass': 1011, 'fail': 0, 'cancelled': 0, 'skipped': 0, 'todo': 0}
-          result = {**metadata, 'exitCode': proc.returncode, 'timedOut': timed_out, 'durationSeconds': time.monotonic() - began, 'counts': counts, 'passed': passed, 'productionSourcesChanged': bool(subprocess.check_output(['git', 'status', '--porcelain', '--untracked-files=normal'], cwd=root))}
-          assert not result['productionSourcesChanged']
-          (evidence / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
+          trials = []
+          for iteration in range(5):
+              trial = evidence / ("trial-" + str(iteration))
+              trial.mkdir()
+              began = time.monotonic()
+              timed_out = False
+              with (trial / 'test.log').open('w') as log:
+                  proc = subprocess.Popen(['npm', 'test'], cwd=root, env=dict(os.environ), stdout=log, stderr=log, start_new_session=True)
+                  while proc.poll() is None:
+                      elapsed = time.monotonic() - began
+                      if elapsed >= 180:
+                          timed_out = True
+                          (trial / 'processes-at-timeout.txt').write_bytes(subprocess.check_output(['ps', '-eo', 'pid,ppid,pgid,etimes,time,stat,comm']))
+                          os.killpg(proc.pid, signal.SIGTERM)
+                          try:
+                              proc.wait(timeout=5)
+                          except subprocess.TimeoutExpired:
+                              os.killpg(proc.pid, signal.SIGKILL)
+                              proc.wait(timeout=5)
+                          break
+                      time.sleep(2)
+              tap = (trial / 'test.log').read_text()
+              counts = {k: int(v) for k, v in re.findall(r'^# (tests|pass|fail|cancelled|skipped|todo) (\d+)\s*$', tap, re.M)}
+              passed = proc.returncode == 0 and not timed_out and counts == {'tests': 1011, 'pass': 1011, 'fail': 0, 'cancelled': 0, 'skipped': 0, 'todo': 0}
+              result = {**metadata, 'exitCode': proc.returncode, 'timedOut': timed_out, 'durationSeconds': time.monotonic() - began, 'counts': counts, 'passed': passed, 'productionSourcesChanged': bool(subprocess.check_output(['git', 'status', '--porcelain', '--untracked-files=normal'], cwd=root))}
+              assert not result['productionSourcesChanged']
+              (trial / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
+              trials.append(result)
+              print(json.dumps({"trial": iteration, "passed": passed, "durationSeconds": round(result["durationSeconds"], 3), "counts": counts, "timedOut": timed_out}), flush=True)
+              if not passed:
+                  break
+          passed = len(trials) == 5 and all(t["passed"] for t in trials)
+          result = {"sourceCommit": source, "trials": trials, "passed": passed, "apkBuild": False}
+          (evidence / "result.json").write_text(json.dumps(result, indent=2) + "\n")
           archive = base / 'diagnostic.zip'
           with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as z:
-              for path in sorted(evidence.iterdir()):
-                  z.write(path, path.name)
+              for path in sorted(evidence.rglob('*')):
+                  if path.is_file():
+                      z.write(path, str(path.relative_to(evidence)))
           raw = archive.read_bytes()
           tag = 'v72-service-test-diagnostic-' + os.environ['GITHUB_RUN_ID'] + '-' + os.environ['GITHUB_RUN_ATTEMPT']
           release = api('repos/' + repository + '/releases', {'tag_name': tag, 'target_commitish': source, 'name': tag, 'body': 'Private bounded diagnostic of the unmodified pinned service test command. No APK or phone-performance claim. Archive SHA256: ' + hashlib.sha256(raw).hexdigest(), 'draft': True, 'prerelease': True})
           upload = release['upload_url'].split('{', 1)[0] + '?name=diagnostic.zip'
           asset = api(upload, raw, raw=True)
           assert asset['size'] == len(raw)
-          print(json.dumps({'passed': passed, 'durationSeconds': round(result['durationSeconds'], 3), 'counts': counts, 'timedOut': timed_out, 'privateEvidenceRetained': True}))
+          print(json.dumps({'passed': passed, 'trials': len(trials), 'privateEvidenceRetained': True}))
           raise SystemExit(0 if passed else 1)
           PY
       - name: Remove the private diagnostic workspace
