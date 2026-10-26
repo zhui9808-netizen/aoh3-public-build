@@ -1,0 +1,98 @@
+name: Diagnose pinned v72 service tests
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/diagnose-v72-tests.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    if: github.repository == 'zhui9808-netizen/aoh3-public-build' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Use the original pinned Node runtime
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.14.0
+      - name: Diagnose tests and retain raw output privately
+        env:
+          GH_TOKEN: ${{ secrets.BUILD_SOURCE_TOKEN }}
+          PYTHONUNBUFFERED: '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          python3 - <<'PY'
+          import base64, hashlib, json, os, pathlib, re, signal, subprocess, time, urllib.parse, urllib.request, zipfile
+          source = '0594bf5f455a8743f1691e47db1cd2a1119ab39e'
+          repository = 'zhui9808-netizen/codex-test'
+          token = os.environ.pop('GH_TOKEN')
+          def api(path, data=None, raw=False):
+              url = path if path.startswith('https://uploads.github.com/') else 'https://api.github.com/' + path
+              headers = {'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'User-Agent': 'aoh3-private-test-diagnostic'}
+              if data is not None:
+                  headers['Content-Type'] = 'application/zip' if raw else 'application/json'
+                  data = data if raw else json.dumps(data).encode()
+              with urllib.request.urlopen(urllib.request.Request(url, data=data, headers=headers), timeout=90) as response:
+                  return json.load(response)
+          assert api('repos/' + repository)['private'] is True
+          base = pathlib.Path(os.environ['RUNNER_TEMP']) / 'aoh3-private-test-diagnostic'
+          base.mkdir()
+          evidence = base / 'evidence'
+          evidence.mkdir()
+          root = base / 'source'
+          env = dict(os.environ)
+          env.update(GIT_TERMINAL_PROMPT='0', GIT_CONFIG_COUNT='1', GIT_CONFIG_KEY_0='http.https://github.com/.extraheader', GIT_CONFIG_VALUE_0='AUTHORIZATION: basic ' + base64.b64encode(('x-access-token:' + token).encode()).decode())
+          with (evidence / 'checkout.log').open('w') as log:
+              subprocess.run(['git', 'init', str(root)], stdout=log, stderr=log, check=True)
+              subprocess.run(['git', '-C', str(root), 'fetch', '--depth=1', '--no-tags', 'https://github.com/' + repository + '.git', source], env=env, stdout=log, stderr=log, check=True, timeout=300)
+              subprocess.run(['git', '-C', str(root), 'checkout', '--detach', 'FETCH_HEAD'], stdout=log, stderr=log, check=True)
+          assert subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD']).decode().strip() == source
+          metadata = {'sourceCommit': source, 'runId': os.environ['GITHUB_RUN_ID'], 'runAttempt': os.environ['GITHUB_RUN_ATTEMPT'], 'node': subprocess.check_output(['node', '--version']).decode().strip(), 'platform': os.uname().sysname, 'command': ['npm', 'test'], 'testFileCount': len(list((root / 'server/test').glob('*.test.mjs'))), 'cpuCount': os.cpu_count(), 'apkBuild': False}
+          assert metadata['node'] == 'v22.14.0' and metadata['testFileCount'] == 99
+          (evidence / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
+          began = time.monotonic()
+          timed_out = False
+          with (evidence / 'test.log').open('w') as log:
+              proc = subprocess.Popen(['npm', 'test'], cwd=root, env=dict(os.environ), stdout=log, stderr=log, start_new_session=True)
+              while proc.poll() is None:
+                  elapsed = time.monotonic() - began
+                  if elapsed >= 180:
+                      timed_out = True
+                      (evidence / 'processes-at-timeout.txt').write_bytes(subprocess.check_output(['ps', '-eo', 'pid,ppid,pgid,etimes,time,stat,comm']))
+                      os.killpg(proc.pid, signal.SIGTERM)
+                      try:
+                          proc.wait(timeout=5)
+                      except subprocess.TimeoutExpired:
+                          os.killpg(proc.pid, signal.SIGKILL)
+                          proc.wait(timeout=5)
+                      break
+                  time.sleep(2)
+          tap = (evidence / 'test.log').read_text()
+          counts = {k: int(v) for k, v in re.findall(r'^# (tests|pass|fail|cancelled|skipped|todo) (\d+)\s*$', tap, re.M)}
+          passed = proc.returncode == 0 and not timed_out and counts == {'tests': 1011, 'pass': 1011, 'fail': 0, 'cancelled': 0, 'skipped': 0, 'todo': 0}
+          result = {**metadata, 'exitCode': proc.returncode, 'timedOut': timed_out, 'durationSeconds': time.monotonic() - began, 'counts': counts, 'passed': passed, 'productionSourcesChanged': bool(subprocess.check_output(['git', 'status', '--porcelain', '--untracked-files=normal'], cwd=root))}
+          assert not result['productionSourcesChanged']
+          (evidence / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
+          archive = base / 'diagnostic.zip'
+          with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as z:
+              for path in sorted(evidence.iterdir()):
+                  z.write(path, path.name)
+          raw = archive.read_bytes()
+          tag = 'v72-service-test-diagnostic-' + os.environ['GITHUB_RUN_ID'] + '-' + os.environ['GITHUB_RUN_ATTEMPT']
+          release = api('repos/' + repository + '/releases', {'tag_name': tag, 'target_commitish': source, 'name': tag, 'body': 'Private bounded diagnostic of the unmodified pinned service test command. No APK or phone-performance claim. Archive SHA256: ' + hashlib.sha256(raw).hexdigest(), 'draft': True, 'prerelease': True})
+          upload = release['upload_url'].split('{', 1)[0] + '?name=diagnostic.zip'
+          asset = api(upload, raw, raw=True)
+          assert asset['size'] == len(raw)
+          print(json.dumps({'passed': passed, 'durationSeconds': round(result['durationSeconds'], 3), 'counts': counts, 'timedOut': timed_out, 'privateEvidenceRetained': True}))
+          raise SystemExit(0 if passed else 1)
+          PY
+      - name: Remove the private diagnostic workspace
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          rm -rf -- "$RUNNER_TEMP/aoh3-private-test-diagnostic"
