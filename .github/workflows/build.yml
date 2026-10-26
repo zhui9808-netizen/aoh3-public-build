@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 env:
   # The publication tool replaces this one sentinel with the reviewed private SHA.
-  AOH_CI_SOURCE: '0594bf5f455a8743f1691e47db1cd2a1119ab39e'
+  AOH_CI_SOURCE: '6a582daa6228026b9f6e6136c80f8bd7f3328f02'
 jobs:
   pair:
     if: github.repository == 'zhui9808-netizen/aoh3-public-build' && github.ref == 'refs/heads/main'
@@ -93,7 +93,10 @@ jobs:
           set -euo pipefail
           # This dedicated entrypoint validates the exact rendered launcher and
           # public run identity without pretending the private SHA is GITHUB_SHA.
-          if ! python3 "$RUNNER_TEMP/aoh3-private/source/tools/public_runner_pair.py" \
+          # Interrupt before the runner's hard deadline so the entrypoint can
+          # retain private failure evidence. A timeout remains a failed build.
+          if ! timeout --signal=INT --kill-after=240s 165m \
+            python3 "$RUNNER_TEMP/aoh3-private/source/tools/public_runner_pair.py" \
             --source "$AOH_CI_SOURCE" \
             --launcher "$GITHUB_WORKSPACE/.github/workflows/build.yml" \
             --output "$RUNNER_TEMP/aoh3-delivery" \
