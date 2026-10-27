@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 env:
   # The publication tool replaces this one sentinel with the reviewed private SHA.
-  AOH_CI_SOURCE: '7bc1bcf8d33545d0e98f315d4b0f5b216ba6cfce'
+  AOH_CI_SOURCE: 'd7aa9790f16bff7ef624e5e200ab2f8ce1d6cd2e'
 jobs:
   pair:
     if: github.repository == 'zhui9808-netizen/aoh3-public-build' && github.ref == 'refs/heads/main'
@@ -113,13 +113,11 @@ jobs:
             exit 1
           fi
           echo "Verified APK pair completed for source $AOH_CI_SOURCE."
-      - name: Deliver only the verified APK pair and fixed-schema public receipts
+      - name: Deliver only fixed-schema public receipts; APKs remain private
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: aoh3-verified-apks-${{ github.run_id }}-${{ github.run_attempt }}
+          name: aoh3-private-build-receipts-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            ${{ runner.temp }}/aoh3-delivery/aoh3-multiplayer-client.apk
-            ${{ runner.temp }}/aoh3-delivery/aoh3-phone-server.apk
             ${{ runner.temp }}/aoh3-delivery/verification.json
             ${{ runner.temp }}/aoh3-delivery/SHA256SUMS.txt
           compression-level: 0
