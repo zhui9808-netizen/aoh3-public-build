@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 env:
   # The publication tool replaces this one sentinel with the reviewed private SHA.
-  AOH_CI_SOURCE: 'a5cf3900f42a6750172613fd9a4586d6fe2e4f8f'
+  AOH_CI_SOURCE: '3b1f48b3e7c797204c10c8f0fbfc6cd90adfd2f3'
 jobs:
   pair:
     if: github.repository == 'zhui9808-netizen/aoh3-public-build' && github.ref == 'refs/heads/main'
@@ -129,5 +129,8 @@ jobs:
         run: |
           set -euo pipefail
           test "$RUNNER_ENVIRONMENT" = github-hosted
+          if test -f "$RUNNER_TEMP/aoh3-private/source/tools/retire_public_runner.py"; then
+            python3 "$RUNNER_TEMP/aoh3-private/source/tools/retire_public_runner.py"
+          fi
           find /dev/shm -maxdepth 1 -type d -name 'aoh3-signing-*' -user "$(id -un)" -exec rm -rf -- {} +
           rm -rf -- "$RUNNER_TEMP/aoh3-private" "$RUNNER_TEMP/aoh3-delivery"
