@@ -1,4 +1,4 @@
-name: Build verified AoH3 APK pair
+name: Build verified AoH3 client, owner and server APKs
 on:
   push:
     branches: [main]
@@ -12,12 +12,12 @@ concurrency:
   cancel-in-progress: false
 env:
   # The publication tool replaces this one sentinel with the reviewed private SHA.
-  AOH_CI_SOURCE: '3545adf187fbd01a443385f4449fe2ed2c73d629'
+  AOH_CI_SOURCE: '867a7348db723bed5eae8d9828828cea5dbfb1c5'
 jobs:
   pair:
     if: github.repository == 'zhui9808-netizen/aoh3-public-build' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
-    timeout-minutes: 225
+    timeout-minutes: 360
     steps:
       - name: Checkout the public launcher only
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -95,7 +95,7 @@ jobs:
           # public run identity without pretending the private SHA is GITHUB_SHA.
           # Interrupt before the runner's hard deadline so the entrypoint can
           # retain private failure evidence. A timeout remains a failed build.
-          if ! timeout --signal=INT --kill-after=240s 210m \
+          if ! timeout --signal=INT --kill-after=240s 345m \
             python3 "$RUNNER_TEMP/aoh3-private/source/tools/public_runner_pair.py" \
             --source "$AOH_CI_SOURCE" \
             --launcher "$GITHUB_WORKSPACE/.github/workflows/build.yml" \
@@ -112,7 +112,7 @@ jobs:
             echo 'Paired build or independent verification failed. No APK or private failure log was published.'
             exit 1
           fi
-          echo "Verified APK pair completed for source $AOH_CI_SOURCE."
+          echo "Verified client, owner and server APKs completed for source $AOH_CI_SOURCE."
       - name: Deliver only fixed-schema public receipts; APKs remain private
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
