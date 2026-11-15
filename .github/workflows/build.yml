@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 env:
   # The publication tool replaces this one sentinel with the reviewed private SHA.
-  AOH_CI_SOURCE: '3f435629813d85db25e8d2c541996222732ff4ab'
+  AOH_CI_SOURCE: 'd78f7fc5d377d458bae55810f04777e19cdf7f92'
 jobs:
   pair:
     if: github.repository == 'zhui9808-netizen/aoh3-public-build' && github.ref == 'refs/heads/main'
@@ -75,7 +75,7 @@ jobs:
             test "$RUNNER_ENVIRONMENT" = github-hosted
             sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/lib/android /opt/hostedtoolcache/CodeQL
             sudo apt-get update -qq
-            sudo apt-get install -y --no-install-recommends cmake ninja-build build-essential libarchive-dev unzip patch zstd
+            sudo apt-get install -y --no-install-recommends cmake ninja-build build-essential libarchive-dev unzip patch zstd libegl1 libgl1-mesa-dri
             sudo apt-get clean
           ) >"$RUNNER_TEMP/aoh3-private/prerequisites.log" 2>&1; then
             echo 'Runner prerequisites failed. Private logs were not published.'
