@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 env:
   # The publication tool replaces this one sentinel with the reviewed private SHA.
-  AOH_CI_SOURCE: '328839cf099f25bdbc4976f21c9aa5c3f993163b'
+  AOH_CI_SOURCE: '693fcd3dae8f370c28929e1944e9738bbee5ee66'
   AOH_WORLD_TEST_JOBS: '4'
 jobs:
   pair:
