@@ -14,10 +14,11 @@ permissions:
   actions: read
 concurrency:
   group: aoh3-reviewed-pair
-  cancel-in-progress: false
+  # Only this named push replaces the previously running build. Ordinary pushes and manual retries queue.
+  cancel-in-progress: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.head_commit.message == 'Build reviewed V89 pirate progression and roster replacement once' }}
 env:
   # The publication tool replaces this one sentinel with the reviewed private SHA.
-  AOH_CI_SOURCE: '6fabe74079d01233baabef1df1e1a719a8e976b4'
+  AOH_CI_SOURCE: 'ec6c699473f9bdc3beb9012c6f713b0a3139c651'
   AOH_WORLD_TEST_JOBS: '4'
 jobs:
   pair:
