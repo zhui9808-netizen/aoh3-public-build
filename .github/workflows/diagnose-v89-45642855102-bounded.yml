@@ -1,0 +1,181 @@
+name: Read one private V89 diagnostic
+on:
+  push:
+    branches: [diagnose-v89-45642855102-bounded]
+permissions: {}
+concurrency:
+  group: diagnose-v89-45642855102-bounded-once
+  cancel-in-progress: false
+jobs:
+  read:
+    if: github.repository_id == '1417062648' && github.repository == 'zhui9808-netizen/aoh3-public-build' && github.ref == 'refs/heads/diagnose-v89-45642855102-bounded' && github.event_name == 'push' && github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Verify and retain exact bounded diagnostic privately
+        env:
+          BUILD_SOURCE_TOKEN: ${{ secrets.BUILD_SOURCE_TOKEN }}
+        shell: bash
+        run: |
+          python3 -I -B - <<'PY'
+          import base64, hashlib, io, json, os, re, urllib.error, urllib.parse, urllib.request, zipfile
+
+          PUBLIC = '/repos/zhui9808-netizen/aoh3-public-build'
+          PRIVATE = '/repos/zhui9808-netizen/codex-test'
+          BASE = 'd0ed10e6d6694b35bc752e521373783a6848a644'
+          BRANCH = 'refs/heads/diagnose-v89-45642855102-bounded'
+          WORKFLOW = '.github/workflows/diagnose-v89-45642855102-bounded.yml'
+          RELEASE = 458684565
+          ASSET = 793262713
+          SIZE = 972352
+          HASH = '82eea452abcdab3e18d11636ffb43c3f46e2a0a1258f12d6a23c517bcd7d7879'
+          TAG = 'public-runner-failure-ec6c699473f9-run45642855102-2'
+          SOURCE = 'ec6c699473f9bdc3beb9012c6f713b0a3139c651'
+          DOWNLOAD = PRIVATE + '/releases/assets/' + str(ASSET)
+          STEP = re.compile(r'(?:GATE|PRIVATE_CHECKPOINT)[:= ]+([A-Za-z0-9_.-]{1,64})(?=\s|$)')
+          HEX = re.compile(r'[0-9a-f]{40}')
+
+          def need(ok):
+              if not ok:
+                  raise ValueError('guard rejected')
+
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, *args, **kwargs):
+                  return None
+
+          opener = urllib.request.build_opener(NoRedirect)
+          token = os.environ.get('BUILD_SOURCE_TOKEN', '')
+
+          def request(url, limit, *, auth=False, accept='application/vnd.github+json', payload=None):
+              headers = {'Accept': accept, 'User-Agent': 'AOH3-owner-diagnostic-once'}
+              if auth:
+                  need(url.startswith('https://api.github.com/') and token)
+                  headers['Authorization'] = 'Bearer ' + token
+                  headers['X-GitHub-Api-Version'] = '2022-11-28'
+              if payload is not None:
+                  headers['Content-Type'] = 'application/json'
+              req = urllib.request.Request(url, data=payload, headers=headers)
+              with opener.open(req, timeout=30) as response:
+                  body = response.read(limit + 1)
+              need(len(body) <= limit)
+              return body
+
+          def api(path, *, auth=False, payload=None):
+              return json.loads(request('https://api.github.com' + path, 2_000_000,
+                                        auth=auth, payload=payload))
+
+          def download():
+              try:
+                  return request('https://api.github.com' + DOWNLOAD, SIZE, auth=True,
+                                 accept='application/octet-stream')
+              except urllib.error.HTTPError as response:
+                  need(response.code in (301, 302, 303, 307, 308))
+                  dest = response.headers['Location']
+                  response.close()
+                  p = urllib.parse.urlsplit(dest)
+                  need(p.scheme == 'https' and p.netloc in
+                       ('release-assets.githubusercontent.com', 'objects.githubusercontent.com'))
+                  return request(dest, SIZE, accept='application/octet-stream')
+
+          def check_private():
+              repo = api(PRIVATE, auth=True)
+              need(repo.get('id') == 1357139625 and repo.get('private') is True
+                   and repo.get('visibility') == 'private'
+                   and repo.get('full_name') == PRIVATE.removeprefix('/repos/'))
+
+          def diagnose(raw):
+              need(len(raw) == SIZE and hashlib.sha256(raw).hexdigest() == HASH)
+              with zipfile.ZipFile(io.BytesIO(raw)) as z:
+                  names = z.namelist()
+                  need(len(names) == len(set(names)) and len(names) <= 1024)
+                  def get(name, limit):
+                      entry = z.getinfo(name)
+                      need(not entry.is_dir() and entry.file_size <= limit)
+                      with z.open(entry) as stream:
+                          value = stream.read(limit + 1)
+                      need(len(value) == entry.file_size)
+                      return value.decode('utf-8', 'replace')
+                  trace = get('failure-trace.txt', 128_000)
+                  stages = []
+                  for name in ('logs/build.log', 'build.log', 'logs/build-tail.log'):
+                      if name in names and z.getinfo(name).file_size <= 2000000:
+                          stages.extend(STEP.findall(get(name, 2_000_000))[-24:])
+                  stages.extend(STEP.findall(trace)[-24:])
+                  details = {}
+                  for key in ('open_view_refresh', 'combat_hooks', 'room_device_display'):
+                      for name in names:
+                          if ('test_' + key) in name and name.endswith('.log') and z.getinfo(name).file_size <= 128000:
+                              details[name] = get(name, 128000)[-2400:]
+                  for name in ('logs/build.log','build.log'):
+                      if name in names and z.getinfo(name).file_size <= 2000000:
+                          lines = get(name, 2000000).splitlines()
+                          for key in ('open_view_refresh','combat_hooks','room_device_display'):
+                              for i, line in enumerate(lines):
+                                  if 'GATE repair-test_'+key in line and '-exit' in line:
+                                      details[key] = '\n'.join(lines[max(0,i-22):i+3])[-2700:]
+
+              # Trace was already redacted at capture; keep it private and bounded.
+              trace = trace.replace(token, '[REDACTED]') if token else trace
+              if len(trace) > 16000:
+                  trace = trace[:4000] + '\n[trace excerpt gap]\n' + trace[-11900:]
+              need(bool(trace.strip()))
+              return {'schema': 'aoh3-owner-diagnosis-v1', 'run': 45642855102,
+                       'attempt': 2, 'job': 139341707190, 'sourceCommit': SOURCE,
+                      'releaseId': RELEASE, 'assetId': ASSET, 'archiveSha256': HASH,
+                      'ownerSupplementStages': stages[-32:], 'failureTraceExcerpt': trace,
+                      'boundedDiagnostics': {k:v.replace(token,'[REDACTED]') for k,v in details.items()}}
+
+          phase = 'event guard'
+          def main():
+              global phase
+              sha = os.environ.get('GITHUB_SHA', '')
+              need(os.environ.get('GITHUB_REPOSITORY_ID') == '1417062648'
+                   and os.environ.get('GITHUB_REPOSITORY') == PUBLIC.removeprefix('/repos/')
+                   and os.environ.get('GITHUB_REF') == BRANCH
+                   and os.environ.get('GITHUB_WORKFLOW_REF') ==
+                       PUBLIC.removeprefix('/repos/') + '/' + WORKFLOW + '@' + BRANCH
+                   and os.environ.get('GITHUB_EVENT_NAME') == 'push'
+                   and os.environ.get('GITHUB_RUN_ATTEMPT') == '1'
+                   and HEX.fullmatch(sha))
+              with open(os.environ['GITHUB_EVENT_PATH'], encoding='utf-8') as stream:
+                  event = json.load(stream)
+              need((event.get('created') is True or event.get('before') == BASE) and event.get('deleted') is False
+                   and event.get('forced') is False and event.get('after') == sha
+                   and event.get('ref') == BRANCH
+                   and event['repository']['id'] == 1417062648)
+              phase = 'public commit identity'
+              commit = api(PUBLIC + '/commits/' + sha)
+              need(commit['sha'] == sha and [p['sha'] for p in commit['parents']] == [BASE]
+                   and [(f['filename'],f['status']) for f in commit['files']] == [(WORKFLOW,'added')])
+              phase = 'private route'
+              check_private()
+              rel = api(PRIVATE + '/releases/' + str(RELEASE), auth=True)
+              need(rel.get('id') == RELEASE and rel.get('draft') is True and rel.get('tag_name') == TAG and rel.get('target_commitish') == SOURCE)
+              phase = 'asset identity'
+              assets = rel['assets']
+              need(len(assets) == 1)
+              a = assets[0]
+              need(a.get('id') == ASSET and a.get('size') == SIZE and a.get('state') == 'uploaded'
+                   and a.get('name') == 'AOH3-private-build-failure.zip'
+                   and a.get('digest') == 'sha256:' + HASH)
+              phase = 'bounded download'
+              archive = download()
+              phase = 'archive guards'
+              result = diagnose(archive)
+              phase = 'archive extraction'
+              content = json.dumps(result, ensure_ascii=False, sort_keys=True).encode()
+              need(len(content) <= 64000 and token.encode() not in content)
+              check_private()
+              phase = 'private receipt'
+              answer = api(PRIVATE + '/git/blobs', auth=True, payload=json.dumps({
+                  'content': base64.b64encode(content).decode(), 'encoding': 'base64'
+              }).encode())
+              blob = hashlib.sha1(b'blob ' + str(len(content)).encode() + b'\0' + content).hexdigest()
+              need(answer.get('sha') == blob)
+              print(blob)
+
+          try:
+              main()
+          except Exception:
+              raise SystemExit('diagnostic unavailable: ' + phase) from None
+          PY
